@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Nexus FireWatch</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
+    body { font-family: Inter, sans-serif; background: #f8fafc; }
+    .panel {
+      position: absolute; top: 16px; left: 16px; z-index: 1000;
+      width: 420px; max-width: calc(100% - 32px);
+      background: rgba(255,255,255,0.98); border-radius: 12px; padding: 16px;
+      box-shadow: 0 10px 30px rgba(2,6,23,0.08); border: 1px solid rgba(15,23,42,0.04);
+    }
+    .legend {
+      position: absolute; right: 16px; bottom: 16px; z-index: 1000;
+      background: rgba(255,255,255,0.95); padding: 10px; border-radius: 8px;
+      font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    }
+    .risk-bar { height: 10px; border-radius: 999px;
+      background: linear-gradient(90deg,#10b981 0%, #f59e0b 50%, #ef4444 100%); }
+    .badge { font-weight:600; padding:6px 10px; border-radius:999px; font-size:13px; }
+    .loader { border: 4px solid #f3f3f3; border-top: 4px solid #ef4444;
+      border-radius:50%; width:18px; height:18px; animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width:640px){ .panel{ left:10px; right:10px; width:auto } }
+  </style>
+</head>
+<body>
+
+  <div id="map" aria-label="Map"></div>
+
+  <div class="panel">
+    <div class="flex items-center justify-between">
+      <h1 class="text-lg font-semibold text-slate-800">Nexus FireWatch</h1>
+      <div id="api-status" class="text-sm text-green-600">API: Ready</div>
+    </div>
+
+    <div class="mt-3 grid grid-cols-2 gap-3">
+      <div>
+        <label class="text-xs text-slate-600">Month</label>
+        <input id="month-slider" type="range" min="1" max="12" value="8" class="w-full" />
+        <div class="mt-1 text-sm"><span id="month-label" class="font-semibold text-rose-600">August</span></div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-600">Cloud endpoint</label>
+        <input id="cloud-url" type="text" class="mt-1 w-full px-2 py-1 border rounded-md text-sm"
+          value="https://predict-fire-risk-485629295753.europe-west1.run.app" />
+      </div>
+    </div>
+
+    <div class="mt-3 flex flex-wrap items-center gap-2">
+      <label class="flex items-center space-x-2 text-xs"><input id="toggle-heat" type="checkbox"> <span>Heatmap</span></label>
+      <label class="flex items-center space-x-2 text-xs"><input id="toggle-clusters" type="checkbox" checked> <span>Clusters</span></label>
+      <button id="clear-markers" class="text-xs px-2 py-1 bg-white border rounded-md">Clear Overlays</button>
+      <button id="clear-pins" class="text-xs px-2 py-1 bg-white border rounded-md">Clear Pins</button>
+    </div>
+
+    <div id="result-card" class="mt-4 bg-slate-50 p-3 rounded-md border border-slate-100 hidden">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div id="risk-emoji" class="text-2xl">❓</div>
+          <div>
+            <div id="risk-badge" class="badge bg-green-50 text-green-700">--</div>
+            <div id="loc-ctx" class="text-xs text-slate-500 mt-1">Lat — Lng — Month</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-xs text-slate-500">Probability</div>
+          <div id="prob-text" class="text-sm font-semibold">--%</div>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <div class="risk-bar overflow-hidden rounded-full relative">
+          <div id="risk-fill" style="width:0%; height:100%; background:transparent; position:absolute; left:0; top:0"></div>
+        </div>
+        <div class="mt-2 text-xs text-slate-500" id="note-text">Model note will appear here.</div>
+      </div>
+
+      <div class="mt-3">
+        <canvas id="yearChart" height="100"></canvas>
+      </div>
+    </div>
+
+    <div id="empty" class="mt-4 text-sm text-slate-600">Click a location on the map to get a prediction.</div>
+  </div>
+
+  <div class="legend">
+    <div class="font-semibold mb-2">Risk Legend</div>
+    <div class="text-xs"><span style="display:inline-block;width:12px;height:8px;background:#10b981;margin-right:8px"></span> Low (0–40%)</div>
+    <div class="text-xs mt-1"><span style="display:inline-block;width:12px;height:8px;background:#f59e0b;margin-right:8px"></span> Moderate (41–75%)</div>
+    <div class="text-xs mt-1"><span style="display:inline-block;width:12px;height:8px;background:#ef4444;margin-right:8px"></span> High (76–100%)</div>
+  </div>
+
+  <!-- Leaflet + plugins -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script>
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+    //  Map + Layers 
+    const map = L.map('map').setView([54.0, -100.0], 4);
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:"© OpenStreetMap" });
+    const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+    const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{ attribution:"© OpenTopoMap" });
+    osm.addTo(map);
+
+    const heatLayer = L.heatLayer([], { radius: 25, blur: 15 });
+    const markersCluster = L.markerClusterGroup();
+    const markersLayer = L.layerGroup();
+    const clickMarkers = L.layerGroup().addTo(map); // for user pins
+
+    L.control.layers(
+      { "OpenStreetMap":osm, "Satellite":sat, "Terrain":terrain },
+      { "Heatmap":heatLayer, "Clusters":markersCluster }
+    ).addTo(map);
+
+    // Chart.js
+    const ctx = document.getElementById('yearChart').getContext('2d');
+    const yearChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: monthNames, datasets: [{ label:"Probability", data:Array(12).fill(null),
+        borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.1)', tension:0.3, fill:true }] },
+      options: { scales:{ y:{ min:0,max:100,ticks:{ callback:v=>v+'%' } } }, plugins:{ legend:{display:false} } }
+    });
+
+    //  UI Elements 
+    const monthSlider = document.getElementById('month-slider');
+    const monthLabel = document.getElementById('month-label');
+    const resultCard = document.getElementById('result-card');
+    const emptyDiv = document.getElementById('empty');
+    const riskEmoji = document.getElementById('risk-emoji');
+    const riskBadge = document.getElementById('risk-badge');
+    const locCtx = document.getElementById('loc-ctx');
+    const probText = document.getElementById('prob-text');
+    const riskFill = document.getElementById('risk-fill');
+    const noteText = document.getElementById('note-text');
+    const cloudUrlInput = document.getElementById('cloud-url');
+    const apiStatus = document.getElementById('api-status');
+
+    // Helpers 
+    function interpretRisk(value){
+      const pct = value*100;
+      if (pct>75) return {label:'High',emoji:'🔥',color:'#ef4444',note:'Consistently high risk'};
+      if (pct>40) return {label:'Moderate',emoji:'⚠️',color:'#f59e0b',note:'Seasonal/moderate risk'};
+      return {label:'Low',emoji:'✅',color:'#10b981',note:'Lower risk'};
+    }
+    function extractProbability(data){
+      let p = data.probability_fire ?? data.probability ?? data.probabilityFire ?? null;
+      if (p===null) return null;
+      if (p>1.5) p/=100; // normalize
+      return Math.max(0,Math.min(1,p));
+    }
+
+    //  Prediction 
+    async function callPrediction(lat,lng,month){
+      const url = cloudUrlInput.value.trim();
+      const res = await fetch(url,{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({latitude:lat,longitude:lng,month})
+      });
+      const data = await res.json();
+      return extractProbability(data);
+    }
+
+    async function fetchYearTrend(lat,lng){
+      const results=[];
+      for(let m=1;m<=12;m++){
+        try{
+          const p=await callPrediction(lat,lng,m);
+          results[m-1]=p;
+          yearChart.data.datasets[0].data[m-1]=p*100;
+          yearChart.update();
+          heatLayer.addLatLng([lat,lng,p]);
+        }catch{results[m-1]=null;}
+      }
+      return results;
+    }
+
+    async function handleClick(lat,lng,month){
+      clickMarkers.addLayer(L.marker([lat,lng]));
+      const p = await callPrediction(lat,lng,month);
+      const info = interpretRisk(p);
+      emptyDiv.style.display='none'; resultCard.style.display='block';
+      locCtx.textContent=`Lat ${lat.toFixed(3)}, Lng ${lng.toFixed(3)} • ${monthNames[month-1]}`;
+      riskBadge.textContent=info.label; riskBadge.style.color=info.color;
+      riskEmoji.textContent=info.emoji; probText.textContent=(p*100).toFixed(1)+'%';
+      riskFill.style.width=(p*100)+'%'; riskFill.style.background=info.color;
+      noteText.textContent=info.note;
+      yearChart.data.datasets[0].data=Array(12).fill(null); yearChart.update();
+      fetchYearTrend(lat,lng);
+    }
+
+    // Events 
+    map.on('click',e=>handleClick(e.latlng.lat,e.latlng.lng,Number(monthSlider.value)));
+    monthSlider.addEventListener('input',e=>monthLabel.textContent=monthNames[e.target.value-1]);
+
+    document.getElementById('toggle-heat').addEventListener('change',e=>{
+      if(e.target.checked) map.addLayer(heatLayer); else map.removeLayer(heatLayer);
+    });
+    document.getElementById('toggle-clusters').addEventListener('change',e=>{
+      if(e.target.checked){ map.addLayer(markersCluster); map.removeLayer(markersLayer);}
+      else {map.addLayer(markersLayer); map.removeLayer(markersCluster);}
+    });
+    document.getElementById('clear-markers').addEventListener('click',()=>{
+      heatLayer.setLatLngs([]); markersCluster.clearLayers(); markersLayer.clearLayers();
+    });
+    document.getElementById('clear-pins').addEventListener('click',()=>{
+      clickMarkers.clearLayers(); resultCard.style.display='none'; emptyDiv.style.display='block';
+    });
+  </script>
+</body>
+</html>
